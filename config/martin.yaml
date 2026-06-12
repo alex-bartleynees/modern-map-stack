@@ -45,6 +45,20 @@ postgres:
         survey_area: float8
         calc_area: float8
 
+    auckland_flood:
+      schema: public
+      table: auckland_flood
+      srid: 4326
+      geometry_column: geom
+      minzoom: 9
+      maxzoom: 22
+      properties:
+        hazard: text
+        rainfall_event: int4
+        climate_change_adjusted: text
+        year_produced: text
+        model_type: text
+
 pmtiles:
   paths:
     - /tiles

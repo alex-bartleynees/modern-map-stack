@@ -190,6 +190,7 @@ export class LayerControlComponent {
     { id: 'ta-boundaries', label: 'TA Boundaries' },
     { id: 'parcels', label: 'Parcels' },
     { id: 'buildings', label: 'Buildings' },
+    { id: 'flood', label: 'Flood Plains (AKL)' },
   ];
 
   bmIcon(bm: BasemapOption): string {

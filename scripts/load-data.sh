@@ -151,6 +151,23 @@ main() {
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE INDEX IF NOT EXISTS idx_nz_titles_title_no ON public.nz_titles (title_no);"
 
+  # Auckland Flood Plains (Auckland Council via ArcGIS Hub — CC-BY)
+  FLOOD_URL="https://hub.arcgis.com/api/v3/datasets/0d50200579364e0bb6cda2be0893fc8b_0/downloads/data?format=geojson&spatialRefId=4326&where=1%3D1"
+  if [ ! -f "$DATA_DIR/auckland_flood.geojson" ] || [ ! -s "$DATA_DIR/auckland_flood.geojson" ]; then
+    echo "Downloading Auckland Flood Plains (~2GB, this will take a while)..."
+    curl -fsSL "$FLOOD_URL" -o "$DATA_DIR/auckland_flood.geojson"
+  else
+    echo "Auckland Flood Plains already downloaded, skipping."
+  fi
+  load_table "$DATA_DIR/auckland_flood.geojson" "auckland_flood" "Auckland Flood Plains"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "
+    CREATE INDEX IF NOT EXISTS idx_auckland_flood_geom ON public.auckland_flood USING GIST(geom);
+    -- Simplify geometry for faster tile rendering (tolerance ~1m at equator)
+    UPDATE public.auckland_flood
+      SET geom = ST_SimplifyPreserveTopology(geom, 0.00001)
+      WHERE ST_NPoints(geom) > 100;
+  "
+
   # NZ Addresses (LINZ layer 123113)
   download_linz_layer "123113" "$DATA_DIR/nz_addresses.gpkg" "nz_addresses" "NZ Addresses"
   load_table "$DATA_DIR/nz_addresses.gpkg" "nz_addresses" "NZ Addresses"
@@ -171,6 +188,8 @@ UNION ALL
 SELECT 'nz_buildings',                            COUNT(*) FROM public.nz_buildings
 UNION ALL
 SELECT 'nz_titles',                              COUNT(*) FROM public.nz_titles
+UNION ALL
+SELECT 'auckland_flood',                          COUNT(*) FROM public.auckland_flood
 UNION ALL
 SELECT 'nz_addresses',                            COUNT(*) FROM public.nz_addresses;
 SQL

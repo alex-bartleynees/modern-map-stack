@@ -10,6 +10,7 @@ const LAYER_VISIBILITY_MAP: Record<string, string[]> = {
   'ta-boundaries': ['ta-boundaries', 'ta-labels'],
   parcels: ['parcels-fill', 'parcels-outline'],
   buildings: ['buildings-fill', 'buildings-outline'],
+  flood: ['flood-fill', 'flood-outline'],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +36,7 @@ export class LayerService {
     map.addSource('ta-labels', { type: 'vector', url: `${MARTIN}/nz_ta_labels` });
     map.addSource('parcels', { type: 'vector', url: `${MARTIN}/nz_parcels` });
     map.addSource('buildings', { type: 'vector', url: `${MARTIN}/nz-buildings` });
+    map.addSource('flood', { type: 'vector', url: `${MARTIN}/auckland_flood` });
     map.addSource('subject-property', { type: 'geojson', data: subjectData });
 
     map.addLayer({
@@ -94,6 +96,28 @@ export class LayerService {
       id: 'buildings-outline', type: 'line', source: 'buildings',
       'source-layer': 'nz_buildings', minzoom: 14,
       paint: { 'line-color': '#e08a3c', 'line-width': 0.6 },
+    });
+
+    // Auckland flood plains — color by return period (rainfall_event).
+    map.addLayer({
+      id: 'flood-fill', type: 'fill', source: 'flood',
+      'source-layer': 'auckland_flood', minzoom: 9,
+      paint: {
+        'fill-color': [
+          'step', ['coalesce', ['get', 'rainfall_event'], 0],
+          '#93c5fd',   // default / < 10yr
+          10,  '#60a5fa',   // 10-year
+          50,  '#3b82f6',   // 50-year
+          100, '#1d4ed8',   // 100-year
+          500, '#1e3a8a',   // 500-year+
+        ],
+        'fill-opacity': 0.45,
+      },
+    });
+    map.addLayer({
+      id: 'flood-outline', type: 'line', source: 'flood',
+      'source-layer': 'auckland_flood', minzoom: 9,
+      paint: { 'line-color': '#3b82f6', 'line-width': 0.5, 'line-opacity': 0.6 },
     });
 
     // Always-on hit layer: transparent until hover/selected state is applied.

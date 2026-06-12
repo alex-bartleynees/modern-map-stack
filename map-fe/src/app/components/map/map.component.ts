@@ -22,7 +22,7 @@ import { BASEMAPS, RASTER_BASE_STYLE } from '../../config/basemaps.config';
 import type { SelectedFeature } from '../../models/layer.model';
 
 const NZ_BOUNDS: maplibregl.LngLatBoundsLike = [165, -47, 178, -34];
-const CLICKABLE_LAYERS = ['parcels-hit', 'buildings-fill', 'meshblocks-fill', 'ta-boundaries'];
+const CLICKABLE_LAYERS = ['parcels-hit', 'buildings-fill', 'flood-fill', 'meshblocks-fill', 'ta-boundaries'];
 
 @Component({
   selector: 'app-map',
@@ -48,6 +48,7 @@ export class MapComponent implements OnDestroy {
     'ta-boundaries': false,
     parcels: false,
     buildings: false,
+    flood: false,
   });
 
   readonly basemaps = BASEMAPS;
