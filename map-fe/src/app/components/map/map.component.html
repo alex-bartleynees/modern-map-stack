@@ -1,0 +1,23 @@
+<div class="map-root">
+  <div #mapEl class="map-canvas"></div>
+
+  <app-layer-control
+    class="panel panel--top-left"
+    [layerVisibility]="layerVisibility()"
+    [activeBasemap]="activeBasemap()"
+    [basemaps]="basemaps"
+    (layerToggle)="onLayerToggle($event)"
+    (basemapChange)="onBasemapChange($event)"
+  />
+
+  <app-stack-info class="panel panel--top-right" />
+
+  @if (selectedFeature()) {
+    <app-feature-panel
+      class="panel panel--bottom-right"
+      [feature]="selectedFeature()!"
+      [isSubjectProperty]="selectedFeature()?.id === subjectPropertyId()"
+      (setSubjectProperty)="onSetSubjectProperty()"
+    />
+  }
+</div>

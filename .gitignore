@@ -1,0 +1,7 @@
+.npm
+.direnv
+.env
+data/*.geojson
+data/*.gpkg
+data/*.zip
+tiles/*.pmtiles

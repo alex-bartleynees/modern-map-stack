@@ -1,0 +1,50 @@
+postgres:
+  connection_string: "postgresql://postgres:postgres@postgis:5432/nz_map"
+
+  tables:
+    nz_territorial_authorities:
+      schema: public
+      table: nz_territorial_authorities
+      srid: 4326
+      geometry_column: geom
+      minzoom: 4
+      maxzoom: 12
+      properties:
+        ta_code: text
+        ta_name: text
+        land_area_sq_km: float8
+
+    nz_ta_labels:
+      schema: public
+      table: nz_territorial_authorities
+      srid: 4326
+      geometry_column: label_point
+      minzoom: 4
+      maxzoom: 12
+      properties:
+        ta_code: text
+        ta_name: text
+
+    nz_parcels:
+      schema: public
+      table: nz_parcels
+      srid: 4326
+      geometry_column: geom
+      id_column: fid
+      minzoom: 12
+      maxzoom: 22
+      properties:
+        id: int4
+        appellation: text
+        affected_surveys: text
+        parcel_intent: text
+        topology_type: text
+        statutory_actions: text
+        land_district: text
+        titles: text
+        survey_area: float8
+        calc_area: float8
+
+pmtiles:
+  paths:
+    - /tiles
