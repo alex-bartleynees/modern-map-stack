@@ -45,6 +45,20 @@ postgres:
         survey_area: float8
         calc_area: float8
 
+    nz_sa2_census:
+      schema: public
+      table: nz_sa2_census
+      srid: 4326
+      geometry_column: geom
+      minzoom: 4
+      maxzoom: 14
+      properties:
+        sa22023_v1_00: text
+        sa22023_v1_00_name: text
+        var_4_24: float8   # total dwellings per km² (2023)
+        var_2_3: float8    # owner-occupancy rate % (2018)
+        var_3_2: float8    # mould / damp rate % (2023)
+
     auckland_flood:
       schema: public
       table: auckland_flood

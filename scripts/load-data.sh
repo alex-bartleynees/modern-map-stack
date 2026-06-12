@@ -116,6 +116,12 @@ main() {
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 
+  # 2023 Census housing data by SA2 (Stats NZ layer 122391)
+  download_statsnz_layer "122391" "$DATA_DIR/nz_sa2_census.geojson" "2023 Census Housing by SA2"
+  load_table "$DATA_DIR/nz_sa2_census.geojson" "nz_sa2_census" "SA2 Census Housing"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_sa2_census_geom ON public.nz_sa2_census USING GIST(geom);"
+
   # Meshblocks (Stats NZ layer 98971)
   download_statsnz_layer "98971" "$DATA_DIR/nz_meshblocks.geojson" "NZ Meshblocks 2023"
   load_table "$DATA_DIR/nz_meshblocks.geojson" "nz_meshblocks" "NZ Meshblocks"
@@ -175,11 +181,15 @@ main() {
     -c "CREATE INDEX IF NOT EXISTS idx_nz_addresses_geom ON public.nz_addresses USING GIST(geom);"
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -f "$SCRIPT_DIR/address-search.sql"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -f "$SCRIPT_DIR/parcel-addresses.sql"
 
   echo ""
   echo "=== Record counts ==="
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<'SQL'
-SELECT 'nz_meshblocks'             AS table_name, COUNT(*) FROM public.nz_meshblocks
+SELECT 'nz_sa2_census'             AS table_name, COUNT(*) FROM public.nz_sa2_census
+UNION ALL
+SELECT 'nz_meshblocks',                           COUNT(*) FROM public.nz_meshblocks
 UNION ALL
 SELECT 'nz_territorial_authorities',              COUNT(*) FROM public.nz_territorial_authorities
 UNION ALL

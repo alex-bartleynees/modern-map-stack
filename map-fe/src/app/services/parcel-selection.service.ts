@@ -35,7 +35,7 @@ export class ParcelSelectionService {
       offset: 8,
     })
       .setLngLat(lngLat)
-      .setHTML(this.buildHtml(this.currentParcelProps, null))
+      .setHTML(this.buildHtml(this.currentParcelProps, null, []))
       .addTo(map);
 
     this.popup.on('close', () => {
@@ -46,9 +46,12 @@ export class ParcelSelectionService {
     });
   }
 
-  enrichWithTitle(titleProps: Record<string, unknown> | null): void {
+  private currentAddresses: string[] = [];
+
+  enrich(titleProps: Record<string, unknown> | null, addresses: string[]): void {
     if (!this.popup || !this.currentParcelProps) return;
-    this.popup.setHTML(this.buildHtml(this.currentParcelProps, titleProps));
+    this.currentAddresses = addresses;
+    this.popup.setHTML(this.buildHtml(this.currentParcelProps, titleProps, addresses));
   }
 
   clear(map: Map): void {
@@ -79,6 +82,7 @@ export class ParcelSelectionService {
   private buildHtml(
     parcel: Record<string, unknown>,
     title: Record<string, unknown> | null,
+    addresses: string[] = [],
   ): string {
     const row = (label: string, value: unknown, highlight = false) =>
       `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:12px;padding:3px 0;">
@@ -89,8 +93,15 @@ export class ParcelSelectionService {
     const area = parcel['calc_area'] != null ? `${parcel['calc_area']} m²` : '—';
     const titleRef = this.esc(parcel['titles']);
 
+    const addressHtml = addresses.length
+      ? addresses.map(a =>
+          `<div style="font-size:11px;color:#00d4aa;margin-bottom:2px;">${this.esc(a)}</div>`
+        ).join('')
+      : '';
+
     const parcelSection = `
-      <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:8px;padding-right:14px;line-height:1.3;">
+      ${addressHtml}
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:8px;padding-right:14px;line-height:1.3;${addresses.length ? 'margin-top:6px;' : ''}">
         ${this.esc(parcel['appellation'])}
       </div>
       ${row('Title', titleRef)}

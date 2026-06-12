@@ -2,11 +2,11 @@
   "name": "map-fe",
   "version": "0.0.0",
   "scripts": {
-    "ng": "HOME=/tmp/ng-home ng",
-    "start": "HOME=/tmp/ng-home ng serve",
-    "build": "HOME=/tmp/ng-home ng build",
-    "watch": "HOME=/tmp/ng-home ng build --watch --configuration development",
-    "test": "HOME=/tmp/ng-home ng test"
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
   },
   "private": true,
   "packageManager": "npm@11.12.1",

@@ -116,6 +116,7 @@ export class StackInfoComponent {
     { layer: 'Buildings', source: 'PMTiles→Martin', badge: 'pmtiles' },
     { layer: 'Subject Property', source: 'GeoJSON', badge: 'geojson' },
     { layer: 'Flood Plains', source: 'Martin', badge: 'martin' },
+    { layer: 'Census SA2', source: 'Martin', badge: 'martin' },
     { layer: 'Geocoder', source: 'pg_featureserv', badge: 'geojson' },
   ];
 }

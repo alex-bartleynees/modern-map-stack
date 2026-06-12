@@ -9,6 +9,7 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import maplibregl, { Map, MapGeoJSONFeature, MapMouseEvent } from 'maplibre-gl';
+import { forkJoin, of } from 'rxjs';
 import type { FeatureCollection, Feature } from 'geojson';
 import { LayerControlComponent } from '../layer-control/layer-control.component';
 import { FeaturePanelComponent } from '../feature-panel/feature-panel.component';
@@ -49,7 +50,10 @@ export class MapComponent implements OnDestroy {
     parcels: false,
     buildings: false,
     flood: false,
+    census: false,
   });
+
+  censusMetric = signal<'density' | 'ownership' | 'mould'>('density');
 
   readonly basemaps = BASEMAPS;
 
@@ -126,7 +130,7 @@ export class MapComponent implements OnDestroy {
         });
         if (layer === 'parcels-hit') {
           this.parcelSelection.select(this.map!, f, e.lngLat, () => this.selectedFeature.set(null));
-          this.fetchTitleForParcel(f.properties as Record<string, unknown>);
+          this.fetchTitleForParcel(f.properties as Record<string, unknown>, f.id);
         }
       });
     });
@@ -170,17 +174,28 @@ export class MapComponent implements OnDestroy {
     });
   }
 
-  private fetchTitleForParcel(props: Record<string, unknown>): void {
-    // titles field can be a comma-separated list; take the first reference
+  private fetchTitleForParcel(props: Record<string, unknown>, featureId?: string | number): void {
     const titleRef = String(props['titles'] ?? '').split(',')[0].trim();
-    if (!titleRef) {
-      this.parcelSelection.enrichWithTitle({});
-      return;
-    }
-    this.featuresService.getTitleByRef(titleRef).subscribe({
-      next: (f) => this.parcelSelection.enrichWithTitle(f?.properties ?? {}),
-      error: () => this.parcelSelection.enrichWithTitle({}),
+    const fid = Number(featureId ?? 0);
+
+    const title$ = titleRef
+      ? this.featuresService.getTitleByRef(titleRef)
+      : of(null);
+    const addresses$ = fid
+      ? this.featuresService.getParcelAddresses(fid)
+      : of([] as string[]);
+
+    forkJoin({ title: title$, addresses: addresses$ }).subscribe({
+      next: ({ title, addresses }) =>
+        this.parcelSelection.enrich(title?.properties ?? null, addresses),
+      error: () => this.parcelSelection.enrich(null, []),
     });
+  }
+
+  onCensusMetricChange(metric: 'density' | 'ownership' | 'mould'): void {
+    this.censusMetric.set(metric);
+    if (!this.map) return;
+    this.layerService.updateCensusMetric(this.map, metric);
   }
 
   onGeocoderSelected(result: GeocoderResult): void {

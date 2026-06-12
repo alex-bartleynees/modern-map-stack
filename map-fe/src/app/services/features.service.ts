@@ -51,6 +51,15 @@ export class FeaturesService {
     );
   }
 
+  getParcelAddresses(fid: number): Observable<string[]> {
+    return this.http
+      .get<{ full_address: string }[]>(
+        `${BASE_URL}/functions/postgisftw.parcel_addresses/items`,
+        { params: new HttpParams().set('parcel_fid', fid) }
+      )
+      .pipe(map((rows) => rows.map((r) => r.full_address)));
+  }
+
   getTitleByRef(titleNo: string): Observable<GeoJSONFeature | null> {
     return this.getFeaturesByFilter('public.nz_titles', { title_no: titleNo }).pipe(
       map((fc) => fc.features[0] ?? null)

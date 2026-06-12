@@ -11,8 +11,10 @@
     [layerVisibility]="layerVisibility()"
     [activeBasemap]="activeBasemap()"
     [basemaps]="basemaps"
+    [censusMetric]="censusMetric()"
     (layerToggle)="onLayerToggle($event)"
     (basemapChange)="onBasemapChange($event)"
+    (censusMetricChange)="onCensusMetricChange($event)"
   />
 
   <app-stack-info class="panel panel--top-right" />

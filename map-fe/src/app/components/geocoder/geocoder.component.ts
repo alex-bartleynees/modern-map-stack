@@ -55,6 +55,10 @@ export interface GeocoderResult {
       font-family: Inter, system-ui, sans-serif;
     }
 
+    @media (max-width: 720px) {
+      .geocoder { width: 100%; }
+    }
+
     .input-wrap {
       display: flex;
       align-items: center;

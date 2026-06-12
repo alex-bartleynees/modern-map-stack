@@ -26,7 +26,7 @@ services:
     volumes:
       - ./tiles:/tiles
       - ./config:/config
-    command: --config /config/martin.yaml
+    command: --config /config/martin.yaml --webui enable-for-all
     depends_on:
       postgis:
         condition: service_healthy

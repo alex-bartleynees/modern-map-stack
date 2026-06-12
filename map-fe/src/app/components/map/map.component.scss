@@ -17,6 +17,8 @@
   &--top-left {
     top: 16px;
     left: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
   }
 
   &--top-right {
@@ -35,5 +37,36 @@
     right: 16px;
     max-height: 50vh;
     overflow-y: auto;
+  }
+}
+
+// Below ~720px the three top panels collide.
+// Geocoder goes full-width at top; layer control shifts down below it;
+// stack-info is hidden (supplementary info, not needed on small screens).
+@media (max-width: 720px) {
+  .panel {
+    &--top-center {
+      left: 8px;
+      right: 8px;
+      top: 8px;
+      transform: none;
+    }
+
+    &--top-left {
+      top: 66px; // geocoder height (~42px) + gap
+      left: 8px;
+      max-height: calc(50vh - 66px);
+    }
+
+    &--top-right {
+      display: none;
+    }
+
+    &--bottom-right {
+      left: 8px;
+      right: 8px;
+      bottom: 16px;
+      max-height: 40vh;
+    }
   }
 }
