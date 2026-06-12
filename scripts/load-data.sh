@@ -56,36 +56,37 @@ EOF
     -o "$output_file"
 }
 
-download_linz_parcels() {
-  local output_file="$DATA_DIR/nz_parcels.gpkg"
+download_linz_layer() {
+  local layer_id="$1"
+  local output_file="$2"
+  local table="$3"
+  local label="$4"
 
   if [ -f "$output_file" ]; then
-    echo "NZ Parcels already downloaded, skipping." >&2
+    echo "$label already downloaded, skipping." >&2
     return 0
   fi
 
   if [ -z "$LINZ_KEY" ]; then
     cat >&2 <<EOF
-ERROR: LINZ_KEY not set. Cannot download NZ parcels.
+ERROR: LINZ_KEY not set. Cannot download $label (LINZ layer $layer_id).
 
 Re-run with: LINZ_KEY=your_key ./scripts/load-data.sh
 
 Get a free key at https://data.linz.govt.nz (sign in → API Keys).
-The layer is: NZ Primary Land Parcels (layer 50772)
-  https://data.linz.govt.nz/layer/50772-nz-primary-land-parcels/
 EOF
     exit 1
   fi
 
-  echo "Downloading NZ Primary Land Parcels from LINZ (~3.2M features, this will take a while)..." >&2
+  echo "Downloading $label from LINZ (layer-$layer_id, large dataset — this will take a while)..." >&2
 
   # ogr2ogr reads LINZ WFS directly, handling pagination automatically.
   # Writing to GeoPackage first avoids holding the full dataset in memory.
   ogr2ogr \
     -f GPKG "$output_file" \
     "WFS:https://data.linz.govt.nz/services;key=$LINZ_KEY/wfs" \
-    "layer-50772" \
-    -nln nz_parcels \
+    "layer-$layer_id" \
+    -nln "$table" \
     -t_srs EPSG:4326 \
     -progress >&2
 }
@@ -131,10 +132,16 @@ main() {
   fi
 
   # NZ Parcels (LINZ layer 50772)
-  download_linz_parcels
+  download_linz_layer "50772" "$DATA_DIR/nz_parcels.gpkg" "nz_parcels" "NZ Primary Land Parcels"
   load_table "$DATA_DIR/nz_parcels.gpkg" "nz_parcels" "NZ Parcels"
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE INDEX IF NOT EXISTS idx_nz_parcels_geom ON public.nz_parcels USING GIST(geom);"
+
+  # NZ Building Outlines (LINZ layer 101290)
+  download_linz_layer "101290" "$DATA_DIR/nz_buildings.gpkg" "nz_buildings" "NZ Building Outlines"
+  load_table "$DATA_DIR/nz_buildings.gpkg" "nz_buildings" "NZ Buildings"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_buildings_geom ON public.nz_buildings USING GIST(geom);"
 
   echo ""
   echo "=== Record counts ==="
@@ -143,11 +150,13 @@ SELECT 'nz_meshblocks'             AS table_name, COUNT(*) FROM public.nz_meshbl
 UNION ALL
 SELECT 'nz_territorial_authorities',              COUNT(*) FROM public.nz_territorial_authorities
 UNION ALL
-SELECT 'nz_parcels',                              COUNT(*) FROM public.nz_parcels;
+SELECT 'nz_parcels',                              COUNT(*) FROM public.nz_parcels
+UNION ALL
+SELECT 'nz_buildings',                            COUNT(*) FROM public.nz_buildings;
 SQL
 
   echo ""
-  echo "Generating PMTiles for meshblocks..."
+  echo "Generating PMTiles..."
   bash "$SCRIPT_DIR/generate-pmtiles.sh"
 
   echo ""

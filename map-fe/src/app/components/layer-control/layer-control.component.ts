@@ -189,6 +189,7 @@ export class LayerControlComponent {
     { id: 'meshblocks', label: 'Meshblocks' },
     { id: 'ta-boundaries', label: 'TA Boundaries' },
     { id: 'parcels', label: 'Parcels' },
+    { id: 'buildings', label: 'Buildings' },
   ];
 
   bmIcon(bm: BasemapOption): string {

@@ -113,6 +113,7 @@ export class StackInfoComponent {
     { layer: 'Meshblocks', source: 'PMTiles→Martin', badge: 'pmtiles' },
     { layer: 'TA Boundaries', source: 'Martin', badge: 'martin' },
     { layer: 'Parcels', source: 'Martin', badge: 'martin' },
+    { layer: 'Buildings', source: 'PMTiles→Martin', badge: 'pmtiles' },
     { layer: 'Subject Property', source: 'GeoJSON', badge: 'geojson' },
   ];
 }
