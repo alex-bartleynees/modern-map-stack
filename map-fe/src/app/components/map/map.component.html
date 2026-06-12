@@ -1,6 +1,11 @@
 <div class="map-root">
   <div #mapEl class="map-canvas"></div>
 
+  <app-geocoder
+    class="panel panel--top-center"
+    (selected)="onGeocoderSelected($event)"
+  />
+
   <app-layer-control
     class="panel panel--top-left"
     [layerVisibility]="layerVisibility()"

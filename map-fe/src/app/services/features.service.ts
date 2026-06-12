@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 const BASE_URL = 'http://localhost:9000';
 
@@ -46,6 +47,20 @@ export class FeaturesService {
     }
     return this.http.get<GeoJSONFeatureCollection>(
       `${BASE_URL}/collections/${collection}/items`,
+      { params }
+    );
+  }
+
+  getTitleByRef(titleNo: string): Observable<GeoJSONFeature | null> {
+    return this.getFeaturesByFilter('public.nz_titles', { title_no: titleNo }).pipe(
+      map((fc) => fc.features[0] ?? null)
+    );
+  }
+
+  geocode(q: string, limit = 8): Observable<GeoJSONFeatureCollection> {
+    const params = new HttpParams().set('q', q).set('lim', limit);
+    return this.http.get<GeoJSONFeatureCollection>(
+      `${BASE_URL}/functions/postgisftw.address_search/items`,
       { params }
     );
   }

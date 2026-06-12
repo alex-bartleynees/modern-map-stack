@@ -13,6 +13,7 @@ import type { FeatureCollection, Feature } from 'geojson';
 import { LayerControlComponent } from '../layer-control/layer-control.component';
 import { FeaturePanelComponent } from '../feature-panel/feature-panel.component';
 import { StackInfoComponent } from '../stack-info/stack-info.component';
+import { GeocoderComponent, type GeocoderResult } from '../geocoder/geocoder.component';
 import { MapService } from '../../services/map.service';
 import { FeaturesService } from '../../services/features.service';
 import { LayerService } from '../../services/layer.service';
@@ -26,7 +27,7 @@ const CLICKABLE_LAYERS = ['parcels-hit', 'buildings-fill', 'meshblocks-fill', 't
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [LayerControlComponent, FeaturePanelComponent, StackInfoComponent],
+  imports: [LayerControlComponent, FeaturePanelComponent, StackInfoComponent, GeocoderComponent],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +54,7 @@ export class MapComponent implements OnDestroy {
 
   private map: Map | null = null;
   private interactionsReady = false;
+  private geocoderMarker: maplibregl.Marker | null = null;
   private subjectData: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
   constructor() {
@@ -123,6 +125,7 @@ export class MapComponent implements OnDestroy {
         });
         if (layer === 'parcels-hit') {
           this.parcelSelection.select(this.map!, f, e.lngLat, () => this.selectedFeature.set(null));
+          this.fetchTitleForParcel(f.properties as Record<string, unknown>);
         }
       });
     });
@@ -166,7 +169,30 @@ export class MapComponent implements OnDestroy {
     });
   }
 
+  private fetchTitleForParcel(props: Record<string, unknown>): void {
+    // titles field can be a comma-separated list; take the first reference
+    const titleRef = String(props['titles'] ?? '').split(',')[0].trim();
+    if (!titleRef) {
+      this.parcelSelection.enrichWithTitle({});
+      return;
+    }
+    this.featuresService.getTitleByRef(titleRef).subscribe({
+      next: (f) => this.parcelSelection.enrichWithTitle(f?.properties ?? {}),
+      error: () => this.parcelSelection.enrichWithTitle({}),
+    });
+  }
+
+  onGeocoderSelected(result: GeocoderResult): void {
+    if (!this.map) return;
+    this.geocoderMarker?.remove();
+    this.geocoderMarker = new maplibregl.Marker({ color: '#00d4aa' })
+      .setLngLat([result.lng, result.lat])
+      .addTo(this.map);
+    this.map.flyTo({ center: [result.lng, result.lat], zoom: 17, duration: 1200 });
+  }
+
   ngOnDestroy(): void {
+    this.geocoderMarker?.remove();
     this.mapService.destroy();
   }
 }

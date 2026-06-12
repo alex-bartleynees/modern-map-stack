@@ -24,6 +24,12 @@
     right: 16px;
   }
 
+  &--top-center {
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   &--bottom-right {
     bottom: 32px;
     right: 16px;

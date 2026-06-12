@@ -28,7 +28,7 @@ download_statsnz_layer() {
   local output_file="$2"
   local label="$3"
 
-  if [ -f "$output_file" ]; then
+  if [ -f "$output_file" ] && [ -s "$output_file" ]; then
     echo "$label already downloaded, skipping."
     return 0
   fi
@@ -62,7 +62,7 @@ download_linz_layer() {
   local table="$3"
   local label="$4"
 
-  if [ -f "$output_file" ]; then
+  if [ -f "$output_file" ] && [ -s "$output_file" ]; then
     echo "$label already downloaded, skipping." >&2
     return 0
   fi
@@ -143,6 +143,22 @@ main() {
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE INDEX IF NOT EXISTS idx_nz_buildings_geom ON public.nz_buildings USING GIST(geom);"
 
+  # NZ Property Titles (LINZ layer 50804) — excludes ownership; freely distributed
+  download_linz_layer "50804" "$DATA_DIR/nz_titles.gpkg" "nz_titles" "NZ Property Titles"
+  load_table "$DATA_DIR/nz_titles.gpkg" "nz_titles" "NZ Property Titles"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_titles_geom ON public.nz_titles USING GIST(geom);"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_titles_title_no ON public.nz_titles (title_no);"
+
+  # NZ Addresses (LINZ layer 123113)
+  download_linz_layer "123113" "$DATA_DIR/nz_addresses.gpkg" "nz_addresses" "NZ Addresses"
+  load_table "$DATA_DIR/nz_addresses.gpkg" "nz_addresses" "NZ Addresses"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_addresses_geom ON public.nz_addresses USING GIST(geom);"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -f "$SCRIPT_DIR/address-search.sql"
+
   echo ""
   echo "=== Record counts ==="
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<'SQL'
@@ -152,7 +168,11 @@ SELECT 'nz_territorial_authorities',              COUNT(*) FROM public.nz_territ
 UNION ALL
 SELECT 'nz_parcels',                              COUNT(*) FROM public.nz_parcels
 UNION ALL
-SELECT 'nz_buildings',                            COUNT(*) FROM public.nz_buildings;
+SELECT 'nz_buildings',                            COUNT(*) FROM public.nz_buildings
+UNION ALL
+SELECT 'nz_titles',                              COUNT(*) FROM public.nz_titles
+UNION ALL
+SELECT 'nz_addresses',                            COUNT(*) FROM public.nz_addresses;
 SQL
 
   echo ""
