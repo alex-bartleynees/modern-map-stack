@@ -19,6 +19,37 @@
 
   <app-stack-info class="panel panel--top-right" />
 
+  <button
+    class="zone-draw-btn panel panel--bottom-left"
+    [class.zone-draw-btn--active]="zoneIsDrawing()"
+    (click)="onToggleDrawZone()"
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/>
+    </svg>
+    @if (zoneIsDrawing()) {
+      Cancel Drawing
+    } @else if (zoneActive()) {
+      Redraw Zone
+    } @else {
+      Draw Zone
+    }
+  </button>
+
+  @if (zoneActive()) {
+    <app-zone-panel
+      class="panel panel--bottom-left-panel"
+      [parcels]="zoneParcels()"
+      (clear)="onClearZone()"
+    />
+  }
+
+  @if (zoneIsDrawing()) {
+    <div class="draw-hint panel panel--draw-hint">
+      Click to add points &bull; Double-click to finish
+    </div>
+  }
+
   @if (selectedFeature()) {
     <app-feature-panel
       class="panel panel--bottom-right"

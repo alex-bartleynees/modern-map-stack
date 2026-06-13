@@ -211,6 +211,35 @@ export class LayerService {
       paint: { 'line-color': '#00d4aa', 'line-width': 2.5 },
     });
 
+    map.addSource('zone-draw', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    map.addLayer({
+      id: 'zone-fill', type: 'fill', source: 'zone-draw',
+      filter: ['==', ['get', 'role'], 'fill'],
+      paint: { 'fill-color': '#00d4aa', 'fill-opacity': 0.1 },
+    });
+    map.addLayer({
+      id: 'zone-outline', type: 'line', source: 'zone-draw',
+      filter: ['==', ['get', 'role'], 'outline'],
+      paint: {
+        'line-color': '#00d4aa',
+        'line-width': 2,
+        'line-dasharray': [4, 3],
+      },
+    });
+    map.addLayer({
+      id: 'zone-vertices', type: 'circle', source: 'zone-draw',
+      filter: ['==', ['get', 'role'], 'vertex'],
+      paint: {
+        'circle-radius': 5,
+        'circle-color': '#00d4aa',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#fff',
+      },
+    });
+
     if (selectedParcelId != null) {
       map.setFeatureState(
         { source: 'parcels', sourceLayer: 'nz_parcels', id: selectedParcelId },

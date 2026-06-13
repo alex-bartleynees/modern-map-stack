@@ -15,10 +15,12 @@ import { LayerControlComponent } from '../layer-control/layer-control.component'
 import { FeaturePanelComponent } from '../feature-panel/feature-panel.component';
 import { StackInfoComponent } from '../stack-info/stack-info.component';
 import { GeocoderComponent, type GeocoderResult } from '../geocoder/geocoder.component';
+import { ZonePanelComponent } from '../zone-panel/zone-panel.component';
 import { MapService } from '../../services/map.service';
 import { FeaturesService } from '../../services/features.service';
 import { LayerService } from '../../services/layer.service';
 import { ParcelSelectionService } from '../../services/parcel-selection.service';
+import { ZoneDrawingService } from '../../services/zone-drawing.service';
 import { BASEMAPS, RASTER_BASE_STYLE } from '../../config/basemaps.config';
 import type { SelectedFeature } from '../../models/layer.model';
 
@@ -28,7 +30,7 @@ const CLICKABLE_LAYERS = ['parcels-hit', 'buildings-fill', 'flood-fill', 'meshbl
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [LayerControlComponent, FeaturePanelComponent, StackInfoComponent, GeocoderComponent],
+  imports: [LayerControlComponent, FeaturePanelComponent, StackInfoComponent, GeocoderComponent, ZonePanelComponent],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +40,7 @@ export class MapComponent implements OnDestroy {
   private featuresService = inject(FeaturesService);
   private layerService = inject(LayerService);
   private parcelSelection = inject(ParcelSelectionService);
+  private zone = inject(ZoneDrawingService);
 
   mapContainer = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
 
@@ -56,11 +59,15 @@ export class MapComponent implements OnDestroy {
   censusMetric = signal<'density' | 'ownership' | 'mould'>('density');
 
   readonly basemaps = BASEMAPS;
+  readonly zoneIsDrawing = this.zone.isDrawing;
+  readonly zoneActive = this.zone.zoneActive;
+  readonly zoneParcels = this.zone.zoneParcels;
 
   private map: Map | null = null;
   private interactionsReady = false;
   private geocoderMarker: maplibregl.Marker | null = null;
   private subjectData: FeatureCollection = { type: 'FeatureCollection', features: [] };
+  private clickTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     afterNextRender(() => this.initMap());
@@ -95,8 +102,16 @@ export class MapComponent implements OnDestroy {
     if (!this.map) return;
     let hoveredParcelId: string | number | null = null;
 
+    this.map.on('mousemove', (e) => {
+      if (!this.map) return;
+      if (this.zone.isDrawing()) {
+        this.zone.updatePreview(this.map, [e.lngLat.lng, e.lngLat.lat]);
+        return;
+      }
+    });
+
     this.map.on('mousemove', 'parcels-hit', (e) => {
-      if (!this.map || !e.features?.length) return;
+      if (!this.map || !e.features?.length || this.zone.isDrawing()) return;
       this.map.getCanvas().style.cursor = 'pointer';
       const fid = e.features[0].id;
       if (fid != null && fid !== hoveredParcelId) {
@@ -109,7 +124,7 @@ export class MapComponent implements OnDestroy {
     });
 
     this.map.on('mouseleave', 'parcels-hit', () => {
-      if (!this.map) return;
+      if (!this.map || this.zone.isDrawing()) return;
       this.map.getCanvas().style.cursor = '';
       if (hoveredParcelId != null) {
         this.map.setFeatureState({ source: 'parcels', sourceLayer: 'nz_parcels', id: hoveredParcelId }, { hover: false });
@@ -119,7 +134,7 @@ export class MapComponent implements OnDestroy {
 
     CLICKABLE_LAYERS.forEach((layer) => {
       this.map!.on('click', layer, (e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) => {
-        if (!e.features?.length) return;
+        if (this.zone.isDrawing() || !e.features?.length) return;
         const f = e.features[0];
         this.selectedFeature.set({
           properties: f.properties as Record<string, unknown>,
@@ -135,7 +150,27 @@ export class MapComponent implements OnDestroy {
       });
     });
 
+    this.map.on('dblclick', (e) => {
+      if (!this.zone.isDrawing()) return;
+      e.preventDefault();
+      if (this.clickTimer) {
+        clearTimeout(this.clickTimer);
+        this.clickTimer = null;
+      }
+      this.zone.completePolygon(this.map!);
+      this.map!.getCanvas().style.cursor = '';
+    });
+
     this.map.on('click', (e: MapMouseEvent) => {
+      if (this.zone.isDrawing()) {
+        const pos: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+        if (this.clickTimer) clearTimeout(this.clickTimer);
+        this.clickTimer = setTimeout(() => {
+          this.zone.addVertex(this.map!, pos);
+          this.clickTimer = null;
+        }, 220);
+        return;
+      }
       const hit = this.map!.queryRenderedFeatures(e.point, { layers: CLICKABLE_LAYERS });
       if (!hit.length) {
         this.parcelSelection.clear(this.map!);
@@ -207,7 +242,27 @@ export class MapComponent implements OnDestroy {
     this.map.flyTo({ center: [result.lng, result.lat], zoom: 17, duration: 1200 });
   }
 
+  onToggleDrawZone(): void {
+    if (!this.map) return;
+    if (this.zone.isDrawing()) {
+      this.zone.cancelDrawing(this.map);
+      this.map.getCanvas().style.cursor = '';
+    } else {
+      this.parcelSelection.clear(this.map);
+      this.selectedFeature.set(null);
+      this.zone.startDrawing(this.map);
+      this.map.getCanvas().style.cursor = 'crosshair';
+    }
+  }
+
+  onClearZone(): void {
+    if (!this.map) return;
+    this.zone.clearZone(this.map);
+    this.map.getCanvas().style.cursor = '';
+  }
+
   ngOnDestroy(): void {
+    if (this.clickTimer) clearTimeout(this.clickTimer);
     this.geocoderMarker?.remove();
     this.mapService.destroy();
   }
