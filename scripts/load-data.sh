@@ -143,11 +143,26 @@ main() {
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE INDEX IF NOT EXISTS idx_nz_parcels_geom ON public.nz_parcels USING GIST(geom);"
 
+  # NZ Contours Topo 1:50k (LINZ layer 50768)
+  download_linz_layer "50768" "$DATA_DIR/nz_contours.gpkg" "nz_contours" "NZ Contours (Topo 1:50k)"
+  load_table "$DATA_DIR/nz_contours.gpkg" "nz_contours" "NZ Contours"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_contours_geom ON public.nz_contours USING GIST(geom);"
+
+  # NZ Suburbs and Localities (LINZ layer 113764)
+  download_linz_layer "113764" "$DATA_DIR/nz_suburbs.gpkg" "nz_suburbs" "NZ Suburbs and Localities"
+  load_table "$DATA_DIR/nz_suburbs.gpkg" "nz_suburbs" "NZ Suburbs and Localities"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE INDEX IF NOT EXISTS idx_nz_suburbs_geom ON public.nz_suburbs USING GIST(geom);"
+
   # NZ Building Outlines (LINZ layer 101290)
   download_linz_layer "101290" "$DATA_DIR/nz_buildings.gpkg" "nz_buildings" "NZ Building Outlines"
   load_table "$DATA_DIR/nz_buildings.gpkg" "nz_buildings" "NZ Buildings"
   psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE INDEX IF NOT EXISTS idx_nz_buildings_geom ON public.nz_buildings USING GIST(geom);"
+
+  echo "Enriching building heights from OSM..."
+  bash "$SCRIPT_DIR/add_osm_heights.sh"
 
   # NZ Property Titles (LINZ layer 50804) — excludes ownership; freely distributed
   download_linz_layer "50804" "$DATA_DIR/nz_titles.gpkg" "nz_titles" "NZ Property Titles"
@@ -194,6 +209,10 @@ UNION ALL
 SELECT 'nz_territorial_authorities',              COUNT(*) FROM public.nz_territorial_authorities
 UNION ALL
 SELECT 'nz_parcels',                              COUNT(*) FROM public.nz_parcels
+UNION ALL
+SELECT 'nz_contours',                            COUNT(*) FROM public.nz_contours
+UNION ALL
+SELECT 'nz_suburbs',                             COUNT(*) FROM public.nz_suburbs
 UNION ALL
 SELECT 'nz_buildings',                            COUNT(*) FROM public.nz_buildings
 UNION ALL

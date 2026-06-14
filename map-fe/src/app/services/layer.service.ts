@@ -34,11 +34,15 @@ const CENSUS_PAINT: Record<CensusMetric, maplibregl.FillLayerSpecification['pain
   },
 };
 
+const TERRAIN_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+
 const LAYER_VISIBILITY_MAP: Record<string, string[]> = {
   meshblocks: ['meshblocks-fill', 'meshblocks-outline'],
   'ta-boundaries': ['ta-boundaries', 'ta-labels'],
+  contours: ['contours-index', 'contours-minor', 'contours-label'],
+  suburbs: ['suburbs-fill', 'suburbs-outline', 'suburbs-label'],
   parcels: ['parcels-fill', 'parcels-outline'],
-  buildings: ['buildings-fill', 'buildings-outline'],
+  buildings: ['buildings-fill', 'buildings-outline', 'buildings-extrusion'],
   flood: ['flood-fill', 'flood-outline'],
   census: ['census-fill', 'census-outline', 'census-labels'],
 };
@@ -51,6 +55,28 @@ export class LayerService {
     subjectData: FeatureCollection,
     selectedParcelId: string | number | null,
   ): void {
+    // Terrain DEM (always registered; only activated when 3D mode is on).
+    map.addSource('terrain-dem', {
+      type: 'raster-dem',
+      tiles: [TERRAIN_TILES],
+      encoding: 'terrarium',
+      tileSize: 256,
+      maxzoom: 15,
+      attribution: 'Terrain © Mapzen / AWS',
+    });
+
+    // Sky layer — rendered first so it sits behind everything when the camera is pitched.
+    map.addLayer({
+      id: 'sky',
+      type: 'sky',
+      layout: { visibility: 'none' },
+      paint: {
+        'sky-type': 'atmosphere',
+        'sky-atmosphere-sun': [0.0, 90.0],
+        'sky-atmosphere-sun-intensity': 15,
+      },
+    } as unknown as maplibregl.LayerSpecification);
+
     if (basemap.type === 'raster') {
       map.addSource('raster-basemap', {
         type: 'raster',
@@ -64,6 +90,8 @@ export class LayerService {
     map.addSource('meshblocks', { type: 'vector', url: `${MARTIN}/nz-meshblocks` });
     map.addSource('territorial-authorities', { type: 'vector', url: `${MARTIN}/nz_territorial_authorities` });
     map.addSource('ta-labels', { type: 'vector', url: `${MARTIN}/nz_ta_labels` });
+    map.addSource('contours', { type: 'vector', url: `${MARTIN}/nz-contours` });
+    map.addSource('suburbs', { type: 'vector', url: `${MARTIN}/nz-suburbs` });
     map.addSource('parcels', { type: 'vector', url: `${MARTIN}/nz_parcels` });
     map.addSource('buildings', { type: 'vector', url: `${MARTIN}/nz-buildings` });
     map.addSource('flood', { type: 'vector', url: `${MARTIN}/auckland_flood` });
@@ -107,6 +135,75 @@ export class LayerService {
       },
     });
 
+    // 100m index contours — visible from z10 (PMTiles min zoom; z8 tiles too dense for NZ)
+    map.addLayer({
+      id: 'contours-index', type: 'line', source: 'contours',
+      'source-layer': 'nz_contours', minzoom: 10,
+      filter: ['==', ['%', ['to-number', ['get', 'elevation']], 100], 0],
+      paint: {
+        'line-color': '#d4783c',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.0, 14, 1.8],
+        'line-opacity': 0.9,
+      },
+    });
+    // Minor contours — only shown when zoomed in enough to be readable
+    map.addLayer({
+      id: 'contours-minor', type: 'line', source: 'contours',
+      'source-layer': 'nz_contours', minzoom: 11,
+      filter: ['!=', ['%', ['to-number', ['get', 'elevation']], 100], 0],
+      paint: {
+        'line-color': '#c47840',
+        'line-width': 0.7,
+        'line-opacity': 0.65,
+      },
+    });
+    // Elevation labels on index contours from z12
+    map.addLayer({
+      id: 'contours-label', type: 'symbol', source: 'contours',
+      'source-layer': 'nz_contours', minzoom: 12,
+      filter: ['==', ['%', ['to-number', ['get', 'elevation']], 100], 0],
+      layout: {
+        'text-field': ['concat', ['to-string', ['get', 'elevation']], 'm'],
+        'text-size': 10,
+        'text-font': ['Open Sans Semibold', 'Open Sans Regular', 'Arial Unicode MS Regular'],
+        'symbol-placement': 'line',
+        'text-max-angle': 30,
+        'text-allow-overlap': false,
+      },
+      paint: {
+        'text-color': '#d4783c',
+        'text-halo-color': 'rgba(255,255,255,0.85)',
+        'text-halo-width': 1.5,
+      },
+    });
+
+    map.addLayer({
+      id: 'suburbs-fill', type: 'fill', source: 'suburbs',
+      'source-layer': 'nz_suburbs', minzoom: 7, maxzoom: 14,
+      paint: { 'fill-color': '#a78bfa', 'fill-opacity': 0.08 },
+    });
+    map.addLayer({
+      id: 'suburbs-outline', type: 'line', source: 'suburbs',
+      'source-layer': 'nz_suburbs', minzoom: 7, maxzoom: 14,
+      paint: { 'line-color': '#a78bfa', 'line-width': 0.8, 'line-opacity': 0.5 },
+    });
+    map.addLayer({
+      id: 'suburbs-label', type: 'symbol', source: 'suburbs',
+      'source-layer': 'nz_suburbs', minzoom: 10, maxzoom: 14,
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-size': 11,
+        'text-font': ['Open Sans Semibold', 'Open Sans Regular', 'Arial Unicode MS Regular'],
+        'text-max-width': 8,
+        'text-allow-overlap': false,
+      },
+      paint: {
+        'text-color': '#c4b5fd',
+        'text-halo-color': 'rgba(0,0,0,0.65)',
+        'text-halo-width': 1.2,
+      },
+    });
+
     map.addLayer({
       id: 'parcels-fill', type: 'fill', source: 'parcels',
       'source-layer': 'nz_parcels', minzoom: 12,
@@ -127,6 +224,32 @@ export class LayerService {
       id: 'buildings-outline', type: 'line', source: 'buildings',
       'source-layer': 'nz_buildings', minzoom: 14,
       paint: { 'line-color': '#e08a3c', 'line-width': 0.6 },
+    });
+
+    // 3D building extrusion — hidden until 3D mode is active.
+    // No height field in LINZ data, so building_id modulo gives natural-looking variation (4–16m).
+    map.addLayer({
+      id: 'buildings-extrusion', type: 'fill-extrusion', source: 'buildings',
+      'source-layer': 'nz_buildings', minzoom: 14,
+      layout: { visibility: 'none' },
+      paint: {
+        'fill-extrusion-color': [
+          'interpolate', ['linear'],
+          ['coalesce', ['get', 'height_m'], ['+', 4, ['%', ['to-number', ['get', 'building_id']], 13]]],
+          4,   '#c8793e',
+          20,  '#d9924f',
+          60,  '#e8a870',
+          150, '#f2c49a',
+          330, '#fff0e0',
+        ],
+        'fill-extrusion-height': [
+          'coalesce',
+          ['get', 'height_m'],
+          ['+', 4, ['%', ['to-number', ['get', 'building_id']], 13]],
+        ],
+        'fill-extrusion-base': 0,
+        'fill-extrusion-opacity': 0.9,
+      },
     });
 
     // Auckland flood plains — color by return period (rainfall_event).
@@ -254,12 +377,25 @@ export class LayerService {
     map.setPaintProperty('census-fill', 'fill-color', paint!['fill-color']);
   }
 
-  applyVisibility(map: Map, visibility: Record<string, boolean>): void {
+  applyVisibility(map: Map, visibility: Record<string, boolean>, is3D = false): void {
     for (const [groupId, layers] of Object.entries(LAYER_VISIBILITY_MAP)) {
-      const value = visibility[groupId] ? 'visible' : 'none';
+      const groupOn = visibility[groupId] ?? false;
       layers.forEach((l) => {
-        if (map.getLayer(l)) map.setLayoutProperty(l, 'visibility', value);
+        let show = groupOn;
+        if (l === 'buildings-extrusion') show = groupOn && is3D;
+        if ((l === 'buildings-fill' || l === 'buildings-outline') && is3D) show = false;
+        if (map.getLayer(l)) map.setLayoutProperty(l, 'visibility', show ? 'visible' : 'none');
       });
     }
+  }
+
+  enableTerrain(map: Map, exaggeration = 1.5): void {
+    map.setTerrain({ source: 'terrain-dem', exaggeration });
+    if (map.getLayer('sky')) map.setLayoutProperty('sky', 'visibility', 'visible');
+  }
+
+  disableTerrain(map: Map): void {
+    map.setTerrain(null as unknown as maplibregl.TerrainSpecification);
+    if (map.getLayer('sky')) map.setLayoutProperty('sky', 'visibility', 'none');
   }
 }

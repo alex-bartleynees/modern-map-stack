@@ -50,6 +50,8 @@ export class MapComponent implements OnDestroy {
   layerVisibility = signal<Record<string, boolean>>({
     meshblocks: false,
     'ta-boundaries': false,
+    contours: false,
+    suburbs: false,
     parcels: false,
     buildings: false,
     flood: false,
@@ -57,6 +59,8 @@ export class MapComponent implements OnDestroy {
   });
 
   censusMetric = signal<'density' | 'ownership' | 'mould'>('density');
+
+  is3DMode = signal(false);
 
   readonly basemaps = BASEMAPS;
   readonly zoneIsDrawing = this.zone.isDrawing;
@@ -89,7 +93,8 @@ export class MapComponent implements OnDestroy {
     if (!this.map) return;
     const bm = BASEMAPS.find((b) => b.id === this.activeBasemap())!;
     this.layerService.addSourcesAndLayers(this.map, bm, this.subjectData, this.parcelSelection.currentId);
-    this.layerService.applyVisibility(this.map, this.layerVisibility());
+    this.layerService.applyVisibility(this.map, this.layerVisibility(), this.is3DMode());
+    if (this.is3DMode()) this.layerService.enableTerrain(this.map);
 
     if (!this.interactionsReady) {
       this.setupInteractions();
@@ -183,7 +188,21 @@ export class MapComponent implements OnDestroy {
     if (!this.map) return;
     const current = this.layerVisibility();
     this.layerVisibility.set({ ...current, [layerId]: !current[layerId] });
-    this.layerService.applyVisibility(this.map, this.layerVisibility());
+    this.layerService.applyVisibility(this.map, this.layerVisibility(), this.is3DMode());
+  }
+
+  onToggle3D(): void {
+    if (!this.map) return;
+    const next = !this.is3DMode();
+    this.is3DMode.set(next);
+    if (next) {
+      this.layerService.enableTerrain(this.map);
+      this.map.flyTo({ pitch: 52, bearing: -10, duration: 900 });
+    } else {
+      this.layerService.disableTerrain(this.map);
+      this.map.flyTo({ pitch: 0, bearing: 0, duration: 900 });
+    }
+    this.layerService.applyVisibility(this.map, this.layerVisibility(), next);
   }
 
   onBasemapChange(basemapId: string): void {

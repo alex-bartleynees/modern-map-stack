@@ -328,6 +328,8 @@ export class LayerControlComponent {
   layers = [
     { id: 'meshblocks', label: 'Meshblocks' },
     { id: 'ta-boundaries', label: 'TA Boundaries' },
+    { id: 'contours', label: 'Contours' },
+    { id: 'suburbs', label: 'Suburbs' },
     { id: 'parcels', label: 'Parcels' },
     { id: 'buildings', label: 'Buildings' },
     { id: 'flood', label: 'Flood Plains (AKL)' },

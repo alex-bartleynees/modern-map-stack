@@ -20,6 +20,7 @@
               # Data pipeline
               gdal          # ogr2ogr — load shapefiles/GeoJSON into PostGIS
               tippecanoe    # generate PMTiles from GeoJSON
+              (python3.withPackages (ps: [ ps.psycopg2 ]))  # height enrichment script
 
               # Database client (psql only — no server)
               postgresql

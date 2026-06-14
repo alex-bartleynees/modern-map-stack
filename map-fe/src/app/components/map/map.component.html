@@ -20,6 +20,20 @@
   <app-stack-info class="panel panel--top-right" />
 
   <button
+    class="mode-btn panel panel--bottom-left-3d"
+    [class.mode-btn--active]="is3DMode()"
+    (click)="onToggle3D()"
+    title="Toggle 3D terrain and buildings"
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
+    </svg>
+    3D
+  </button>
+
+  <button
     class="zone-draw-btn panel panel--bottom-left"
     [class.zone-draw-btn--active]="zoneIsDrawing()"
     (click)="onToggleDrawZone()"
