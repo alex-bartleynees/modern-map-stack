@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-const BASE_URL = 'http://localhost:9000';
+const BASE_URL = '/features';
 
 export type GeoJSONFeature = {
   type: 'Feature';

@@ -118,10 +118,10 @@ Building heights are enriched from OpenStreetMap via the Overpass API (`scripts/
 
 ```bash
 # Martin serving all layers
-curl -s http://localhost:7100/catalog | jq '[.[].id]'
+curl -s http://localhost:7100/tiles/catalog | jq '[.[].id]'
 
 # pg_featureserv functions
-curl -s 'http://localhost:9000/functions/postgisftw.address_search/items?q=Lambton+Quay&lim=3' | jq '[.features[].properties.full_address]'
+curl -s 'http://localhost:9000/features/functions/postgisftw.address_search/items?q=Lambton+Quay&lim=3' | jq '[.features[].properties.full_address]'
 
 # PMTiles exist
 ls -lh tiles/

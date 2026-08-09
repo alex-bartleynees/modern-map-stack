@@ -5,7 +5,7 @@ DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 DB_NAME="${DB_NAME:-nz_map}"
 DB_USER="${DB_USER:-postgres}"
-DB_PASS="${DB_PASS:-postgres}"
+DB_PASS="${DB_PASS:-${POSTGRES_PASSWORD:-postgres}}"
 KOORDINATES_KEY="${KOORDINATES_KEY:-}"
 LINZ_KEY="${LINZ_KEY:-}"
 

@@ -1,0 +1,21 @@
+[Server]
+HttpHost = "0.0.0.0"
+HttpPort = 9000
+
+# Routes are served under this prefix so nginx can reverse-proxy /features/* to this service.
+BasePath = "/features"
+
+[Database]
+# DATABASE_URL environment variable takes precedence over DbConnection.
+
+# Only publish the tables the frontend actually queries — not the whole database.
+TableIncludes = [ "public.nz_parcels", "public.nz_titles" ]
+
+# Only publish functions from this schema (this is also pg_featureserv's own
+# default). It's a schema allowlist, not a function-name list — the postgisftw
+# schema only contains the two lookup functions the frontend uses.
+FunctionIncludes = [ "postgisftw" ]
+
+[Paging]
+LimitDefault = 20
+LimitMax = 500

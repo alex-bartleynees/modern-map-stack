@@ -1,12 +1,21 @@
 services:
+  map-fe:
+    build:
+      context: ./map-fe
+    ports:
+      - "8000:80"
+    depends_on:
+      - martin
+      - pg_featureserv
+
   postgis:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_DB: nz_map
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts:/scripts
@@ -20,13 +29,13 @@ services:
   martin:
     image: ghcr.io/maplibre/martin:latest
     ports:
-      - "7100:3000"
+      - "127.0.0.1:7100:3000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgis:5432/nz_map
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgis:5432/nz_map
     volumes:
       - ./tiles:/tiles
       - ./config:/config
-    command: --config /config/martin.yaml --webui enable-for-all
+    command: --config /config/martin.yaml --route-prefix /tiles
     depends_on:
       postgis:
         condition: service_healthy
@@ -34,9 +43,12 @@ services:
   pg_featureserv:
     image: pramsey/pg_featureserv:latest
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgis:5432/nz_map
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgis:5432/nz_map
+    volumes:
+      - ./config/pg_featureserv.toml:/config/pg_featureserv.toml:ro
+    command: -c /config/pg_featureserv.toml
     depends_on:
       postgis:
         condition: service_healthy

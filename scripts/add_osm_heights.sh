@@ -5,7 +5,8 @@ DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 DB_NAME="${DB_NAME:-nz_map}"
 DB_USER="${DB_USER:-postgres}"
-DB_PASS="${DB_PASS:-postgres}"
+DB_PASS="${DB_PASS:-${POSTGRES_PASSWORD:-postgres}}"
+export DB_HOST DB_PORT DB_NAME DB_USER DB_PASS
 
 export PGPASSWORD="$DB_PASS"
 
@@ -26,10 +27,15 @@ area["ISO3166-1"="NZ"][admin_level="2"]->.nz;
 out center tags;
 QUERY
 
-curl -fsSL --max-time 180 \
+if ! curl -fsSL --max-time 180 --retry 3 --retry-delay 10 --retry-all-errors \
   "https://overpass-api.de/api/interpreter" \
   --data @/tmp/overpass_query.txt \
-  -o /tmp/osm_building_heights.json
+  -o /tmp/osm_building_heights.json; then
+  echo "WARNING: Overpass API request failed after retries — skipping OSM height enrichment."
+  echo "  Buildings will fall back to the approximated height used by the frontend."
+  echo "  Re-run scripts/add_osm_heights.sh later to backfill real heights."
+  exit 0
+fi
 
 echo "Importing heights and spatial-joining to nz_buildings..."
 python3 - <<'PY'

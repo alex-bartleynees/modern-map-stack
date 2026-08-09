@@ -3,7 +3,7 @@ import maplibregl, { type Map } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
 import type { BasemapConfig } from '../config/basemaps.config';
 
-const MARTIN = 'http://localhost:7100';
+const MARTIN = '/tiles';
 
 type CensusMetric = 'density' | 'ownership' | 'mould';
 

@@ -1,5 +1,7 @@
+cors: false
+
 postgres:
-  connection_string: "postgresql://postgres:postgres@postgis:5432/nz_map"
+  connection_string: ${DATABASE_URL}
 
   tables:
     nz_territorial_authorities:
